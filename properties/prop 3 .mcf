@@ -1,0 +1,3 @@
+[true*.PressLockButton.!LockCar*]<true*.LockCar>true && [true*.PressUnlockButton.!UnlockCar*]<true*.UnlockCar>true
+
+

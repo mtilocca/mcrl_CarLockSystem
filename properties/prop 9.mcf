@@ -1,0 +1,1 @@
+[true*. Crash. InitiateAirbag]<(UseHandleFrontInside || UseHandleFrontOutside).OpenCarDoorFront>true && [true*.Crash.InitiateAirbag]<(UseHandleRearInside || UseHandleRearOutside). OpenCarDoorRear>true

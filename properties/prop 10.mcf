@@ -1,0 +1,4 @@
+[!(UseHandleFrontInside||UseHandleRearInside)*.LockCar.!(UnlockCar||UseHandleFrontInside||UseHandleRearInside)*.(OpenCarDoorRear)]false &&  [!(UseHandleFrontInside||UseHandleRearInside)*.LockCar.!(UnlockCar||UseHandleFrontInside||UseHandleRearInside)*.(OpenCarDoorFront)]false
+&&
+[!(UseHandleFrontInside||UseHandleRearInside)*.UnlockCar]<!(LockCar||UseHandleFrontInside||UseHandleRearInside)*>[OpenCarDoorFront]true 
+&&[!(UseHandleFrontInside||UseHandleRearInside)*.UnlockCar]<!(LockCar||UseHandleFrontInside||UseHandleRearInside)*>[OpenCarDoorRear]true

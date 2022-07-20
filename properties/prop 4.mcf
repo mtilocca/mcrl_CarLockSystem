@@ -1,0 +1,1 @@
+[true*.SendSpeed(fast) .!LockCar*]<true*.LockCar>true

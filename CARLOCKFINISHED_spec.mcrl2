@@ -1,0 +1,87 @@
+% The speed is modeled as a discrete finite domain
+% Slow represents speeds between 0 and 30 km/h.
+% Fast represents speeds above 30 km/h.
+sort 
+    Speed = struct stationary | slow | fast ;
+
+map 
+    faster : Speed -> Speed;
+    slower : Speed -> Speed;
+
+eqn 
+    faster(stationary) = slow;
+    faster(slow) = fast;
+    faster(fast) = fast;
+    slower(stationary) = stationary;
+    slower(slow) = stationary;
+    slower(fast) = slow;
+
+act 
+	Crash, Throttle, Brake, SpeedUp, SlowDown, InitiateAirbagS, InitiateAirbagR, LockCar, UnlockCar;
+	PressLockButton, PressUnlockButton, UseHandleFrontOutside, UseHandleRearOutside, UseHandleFrontInside, UseHandleRearInside, DeployAirbag;
+	OpenCarDoorFront, OpenCarDoorRear, PutChildSafetyLockOn, PutChildSafetyLockOff; 
+	SendSpeedS : Speed;
+	SendSpeedR : Speed;
+	DetectCrashS, DetectCrashR;
+	SendSpeed: Speed;
+	LockSignalS, LockSignalR, UnlockSignalS, UnlockSignalR; 
+	UHandleFS, UHandleFR, UHandleOutFS, UHandleOutFR;
+	UHandleRS, UHandleRR, UHandleOutRS, UHandleOutRR;
+	DetectCrash, InitiateAirbag, LockSignal, UnlockSignal;
+	UseHandleFrontInsideSignal, UseHandleFrontOutsideSignal, UseHandleRearInsideSignal, UseHandleRearOutsideSignal;
+
+
+
+proc
+	Environment( speed:Speed, crashed:Bool) = 
+		!crashed -> Crash . DetectCrashS . Environment(stationary,true) +
+		!crashed -> Throttle . (Environment() + SpeedUp . SendSpeedS(faster(speed)) . Environment(speed = faster(speed)) ) + 
+		!crashed -> Brake . (Environment() + SlowDown . SendSpeedS(slower(speed)) . Environment(speed = slower(speed)) ) ;
+
+	Controller(speed:Speed, locked:Bool, childlocked:Bool) =
+		sum Rspeed:Speed . SendSpeedR(Rspeed) . (
+			(Rspeed!=fast) -> Controller(Rspeed, locked, childlocked) <>
+			LockCar.Controller(fast, true, childlocked) ) +		
+
+		DetectCrashR . InitiateAirbagS .UnlockCar.PutChildSafetyLockOff . Controller(stationary, false, false) + 
+     	LockSignalR . LockCar . Controller(speed, true, childlocked) + 
+		UnlockSignalR . UnlockCar . Controller(speed, false, childlocked) + 
+		!(speed==stationary && locked) -> UHandleFR . OpenCarDoorFront . Controller() + 
+		(speed==stationary) -> UHandleFR . UnlockCar . OpenCarDoorFront . Controller(stationary, false, childlocked) + 
+		!locked -> UHandleOutFR . OpenCarDoorFront . Controller() + 
+ 		(!childlocked && !(speed==stationary) && !locked) -> UHandleRR . OpenCarDoorRear . Controller() + 
+ 		(!childlocked && (speed==stationary)) -> UHandleRR . UnlockCar . OpenCarDoorRear . Controller(stationary, false, childlocked) + 
+		!locked -> UHandleOutRR . OpenCarDoorRear . Controller() +
+		PutChildSafetyLockOn . Controller(speed, locked, true) +
+		PutChildSafetyLockOff . Controller(speed, locked, false);
+
+	FrontDoor = 
+		UseHandleFrontInside . UHandleFS . FrontDoor + 
+		UseHandleFrontOutside . (UHandleOutFS . FrontDoor + FrontDoor);
+
+	RearDoor = 
+		UseHandleRearInside . UHandleRS . RearDoor + 
+		UseHandleRearOutside . (UHandleOutRS . RearDoor + RearDoor);
+
+	Airbag =
+		InitiateAirbagR . DeployAirbag . delta;
+    
+	Key = 
+		PressLockButton . LockSignalS . Key + 
+		PressUnlockButton . UnlockSignalS . Key; 
+
+
+init
+ allow({UseHandleFrontInside , UseHandleFrontOutside, UseHandleRearInside , UseHandleRearOutside, PressLockButton, PressUnlockButton, Crash, Throttle, Brake, PutChildSafetyLockOn, PutChildSafetyLockOff, SpeedUp, SlowDown, OpenCarDoorFront, OpenCarDoorRear, DetectCrash, InitiateAirbag, LockSignal, UnlockSignal, UseHandleFrontInsideSignal, UseHandleRearInsideSignal, UseHandleFrontOutsideSignal, UseHandleRearOutsideSignal, DeployAirbag, LockCar, UnlockCar, SendSpeed},
+ comm ({DetectCrashS | DetectCrashR -> DetectCrash,
+	InitiateAirbagS | InitiateAirbagR -> InitiateAirbag, 
+	LockSignalS | LockSignalR -> LockSignal, 
+	UnlockSignalS | UnlockSignalR -> UnlockSignal,
+	UHandleFS | UHandleFR -> UseHandleFrontInsideSignal,
+	UHandleRS | UHandleRR -> UseHandleRearInsideSignal,
+	UHandleOutFS | UHandleOutFR -> UseHandleFrontOutsideSignal,
+	UHandleOutRS | UHandleOutRR -> UseHandleRearOutsideSignal,
+	SendSpeedS | SendSpeedR -> SendSpeed},
+
+
+Environment(stationary, false) || Controller(stationary, false, false) || FrontDoor || RearDoor || Airbag || Key ));
